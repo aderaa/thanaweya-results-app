@@ -22,10 +22,14 @@ export default function App() {
     fetch("/data/students.json")
       .then((res) => res.json())
       .then((data) => {
-        const filtered = data.filter((student) => student.total_degree <= 320);
-        const ranked = filtered
+        const valid = data.filter((student) => student.total_degree <= 320);
+        const ranked = valid
           .sort((a, b) => b.total_degree - a.total_degree)
-          .map((student, index) => ({ ...student, rank: index + 1 }));
+          .map((student, index) => ({
+            ...student,
+            rank: index + 1,
+            normalizedName: normalizeArabic(student.arabic_name),
+          }));
         setStudents(ranked);
         setIsLoading(false);
       });
@@ -34,14 +38,22 @@ export default function App() {
   const handleSearch = () => {
     setSearchPerformed(true);
     setIsSearching(true);
-    setResults([]);
-    setTimeout(() => {
-      const filtered = students.filter((student) =>
-        normalizeArabic(student.arabic_name).includes(normalizeArabic(query))
+    const trimmed = query.trim();
+    let filtered = [];
+    if (/^\d+$/.test(trimmed)) {
+      // Search by ID (partial match)
+      filtered = students.filter((s) =>
+        s.seating_no.toString().includes(trimmed)
       );
-      setResults(filtered);
-      setIsSearching(false);
-    }, 200);
+    } else {
+      // Search by normalized name
+      const norm = normalizeArabic(trimmed);
+      filtered = students.filter((s) =>
+        s.normalizedName.includes(norm)
+      );
+    }
+    setResults(filtered);
+    setIsSearching(false);
   };
 
   const handleReset = () => {
@@ -51,17 +63,30 @@ export default function App() {
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    setDarkMode((prev) => !prev);
   };
 
   const Spinner = () => (
-    <div className="flex justify-center my-6">
-      <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="flex justify-center my-6 space-x-2">
+      <div
+        className="w-3 h-3 bg-indigo-600 rounded-full animate-bounce"
+        style={{ animationDelay: "0s" }}
+      ></div>
+      <div
+        className="w-3 h-3 bg-indigo-600 rounded-full animate-bounce"
+        style={{ animationDelay: "0.2s" }}
+      ></div>
+      <div
+        className="w-3 h-3 bg-indigo-600 rounded-full animate-bounce"
+        style={{ animationDelay: "0.4s" }}
+      ></div>
     </div>
   );
 
   return (
-    <div className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
+    <div
+      className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}
+    >
       <div className="max-w-4xl mx-auto relative">
         <button
           onClick={toggleDarkMode}
@@ -69,15 +94,18 @@ export default function App() {
         >
           {darkMode ? "☀️ وضع النهار" : "🌙 الوضع الليلي"}
         </button>
-        <h1 className="text-3xl font-bold text-center mb-8">نتيجة الثانوية العامة - 2025</h1>
+
+        <h1 className="text-3xl font-bold text-center mb-8">
+          نتيجة الثانوية العامة - 2025
+        </h1>
 
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center mb-6">
           <input
             type="text"
-            placeholder="اكتب جزء من الاسم..."
+            placeholder="اكتب جزء من الاسم أو رقم الجلوس..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+            className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
           <button
             onClick={handleSearch}
@@ -122,6 +150,9 @@ export default function App() {
                             : "bg-white border-indigo-100"
                         }`}
                       >
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          رقم الجلوس: <strong>{student.seating_no}</strong>
+                        </p>
                         <p className="text-lg font-medium">
                           {student.arabic_name}
                           {student.rank <= 10 && (
@@ -130,8 +161,12 @@ export default function App() {
                             </span>
                           )}
                         </p>
-                        <p className="text-sm">المجموع: <strong>{student.total_degree}</strong></p>
-                        <p className="text-sm">الترتيب على الجمهورية: <strong>{student.rank}</strong></p>
+                        <p className="text-sm">
+                          المجموع: <strong>{student.total_degree}</strong>
+                        </p>
+                        <p className="text-sm">
+                          الترتيب على الجمهورية: <strong>{student.rank}</strong>
+                        </p>
                       </div>
                     ))}
                   </div>
