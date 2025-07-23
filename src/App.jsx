@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 function normalizeArabic(text) {
   return text
@@ -22,6 +22,7 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
@@ -32,6 +33,8 @@ export default function App() {
   const timerRef = useRef(null);
   const abortRef = useRef(false);
   const workerRef = useRef(null);
+
+  const PAGE_SIZE = 24;
 
   // Initial data load with timer
   useEffect(() => {
@@ -66,7 +69,11 @@ export default function App() {
   // Setup Web Worker for background search
   useEffect(() => {
     if (!students.length) return;
-    const workerCode = `self.onmessage = e => { const { students, trimmed, raw } = e.data; const matched = students.filter(s => s.normalizedName.includes(trimmed) || s.idString.includes(raw)); postMessage(matched); }`;
+    const workerCode = `self.onmessage = e => {
+      const { students, trimmed, raw } = e.data;
+      const matched = students.filter(s => s.normalizedName.includes(trimmed) || s.idString.includes(raw));
+      postMessage(matched);
+    }`;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     workerRef.current = new Worker(URL.createObjectURL(blob));
     workerRef.current.onmessage = e => {
@@ -75,6 +82,7 @@ export default function App() {
       setElapsedTime(Date.now() - startTimeRef.current);
       setResults(e.data);
       setIsSearching(false);
+      setCurrentPage(1);
     };
     return () => workerRef.current && workerRef.current.terminate();
   }, [students]);
@@ -111,7 +119,7 @@ export default function App() {
     abortRef.current = true;
     clearInterval(timerRef.current);
     setQuery(""); setResults([]); setSearchPerformed(false);
-    setIsSearching(false); setError(""); setElapsedTime(0);
+    setIsSearching(false); setError(""); setElapsedTime(0); setCurrentPage(1);
   };
 
   const toggleDarkMode = () => setDarkMode(prev => !prev);
@@ -126,34 +134,56 @@ export default function App() {
     </div>
   );
 
+  // compute paginated results
+  const totalPages = Math.ceil(results.length / PAGE_SIZE) || 1;
+  const paginated = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
-    <div className={`${darkMode? 'bg-gray-900 text-white':'bg-gray-50 text-black'} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
+    <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
       <div className="max-w-4xl mx-auto relative">
         <button onClick={toggleDarkMode} className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition">
-          {darkMode? '☀️ وضع النهار':'🌙 الوضع الليلي'}
+          {darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}
         </button>
         <h1 className="text-3xl font-bold text-center mb-8">نتيجة الثانوية العامة - 2025</h1>
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center mb-4">
           <input type="text" placeholder="اكتب جزء من الاسم أو رقم الجلوس..." value={query}
-            onChange={e=>{setQuery(e.target.value); if(error) setError("")}}
-            className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"/>
-          {!isSearching? <button onClick={handleSearch} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
-          : <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">إيقاف البحث</button>}
+            onChange={e => { setQuery(e.target.value); if (error) setError(""); }}
+            className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800" />
+          {!isSearching ? <button onClick={handleSearch} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
+            : <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">إيقاف البحث</button>}
           <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">إعادة ضبط</button>
         </div>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        {(isLoading||isSearching) && <Spinner />}
+        {(isLoading || isSearching) && <Spinner />}
         {!isLoading && searchPerformed && !isSearching && (
           <>
-            <p className="text-center mb-4">{results.length>0?`عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}`:"لا يوجد نتائج مطابقة"}</p>
-            {results.length>0 && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-              {results.map(s=>(<div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${s.rank<=10?(darkMode?"border-yellow-400 bg-yellow-900":"border-yellow-400 bg-yellow-50"):(darkMode?"border-gray-700 bg-gray-800":"bg-white border-indigo-100")}`}>
-                <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
-                <p className="text-lg font-medium">{s.arabic_name}{s.rank<=10&&<span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
-                <p className="text-sm">المجموع: <strong>{s.total_degree}</strong></p>
-                <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong></p>
-              </div>))}
-            </div>}
+            <p className="text-center mb-4">{results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}</p>
+            {results.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  {paginated.map(s => (
+                    <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${s.rank <= 10 ? (darkMode ? 'border-yellow-400 bg-yellow-900' : 'border-yellow-400 bg-yellow-50') : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')}`}
+                    >
+                      <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
+                      <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
+                      <p className="text-sm">المجموع: <strong>{s.total_degree}</strong></p>
+                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong></p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center items-center space-x-2 mb-8">
+                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+                  >السابق</button>
+                  <span>صفحة {currentPage} من {totalPages}</span>
+                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+                  >التالي</button>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
