@@ -12,11 +12,11 @@ function normalizeArabic(text) {
 
 function formatTime(ms) {
   if (ms < 1000) return `${ms} مللي ثانية`;
-  const totalSeconds = ms / 1000;
-  if (totalSeconds < 60) return `${totalSeconds.toFixed(2)} ثانية`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = (totalSeconds % 60).toFixed(2);
-  return `${minutes} دقيقة و ${seconds} ثانية`;
+  const totalSec = ms / 1000;
+  if (totalSec < 60) return `${totalSec.toFixed(2)} ثانية`;
+  const min = Math.floor(totalSec / 60);
+  const sec = (totalSec % 60).toFixed(2);
+  return `${min} دقيقة و ${sec} ثانية`;
 }
 
 export default function App() {
@@ -30,11 +30,19 @@ export default function App() {
   const [error, setError] = useState("");
   const [elapsedTime, setElapsedTime] = useState(0);
   const abortRef = useRef(false);
-  const startTimeRef = useRef(0);
-  const timerIntervalRef = useRef(null);
+  const timerRef = useRef(null);
   const [isPending, startTransition] = useTransition();
 
+  // Initial data load with timer
   useEffect(() => {
+    abortRef.current = false;
+    setIsLoading(true);
+    setElapsedTime(0);
+    const start = Date.now();
+    timerRef.current = setInterval(() => {
+      setElapsedTime(Date.now() - start);
+    }, 100);
+
     fetch("/data/students.json")
       .then((res) => res.json())
       .then((data) => {
@@ -49,12 +57,21 @@ export default function App() {
           }));
         setStudents(ranked);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        clearInterval(timerRef.current);
+        setElapsedTime(Date.now() - start);
+        setIsLoading(false);
+      });
   }, []);
 
+  // Fuse index
   const fuse = useMemo(() => {
     if (!students.length) return null;
-    return new Fuse(students, { keys: ["normalizedName", "idString"], threshold: 0.2, ignoreLocation: true });
+    return new Fuse(students, {
+      keys: ["normalizedName", "idString"],
+      threshold: 0.2,
+      ignoreLocation: true,
+    });
   }, [students]);
 
   const handleSearch = () => {
@@ -70,19 +87,19 @@ export default function App() {
     setIsSearching(true);
     setResults([]);
     setElapsedTime(0);
-    startTimeRef.current = Date.now();
-    timerIntervalRef.current = setInterval(() => {
-      setElapsedTime(Date.now() - startTimeRef.current);
+
+    const start = Date.now();
+    timerRef.current = setInterval(() => {
+      setElapsedTime(Date.now() - start);
     }, 100);
 
     startTransition(() => {
       const norm = normalizeArabic(trimmed);
       const fuseResults = fuse.search(norm);
       if (!abortRef.current) {
-        const matched = fuseResults.map(({ item }) => item);
-        clearInterval(timerIntervalRef.current);
-        setElapsedTime(Date.now() - startTimeRef.current);
-        setResults(matched);
+        clearInterval(timerRef.current);
+        setElapsedTime(Date.now() - start);
+        setResults(fuseResults.map(({ item }) => item));
       }
       setIsSearching(false);
     });
@@ -90,13 +107,13 @@ export default function App() {
 
   const handleStop = () => {
     abortRef.current = true;
-    clearInterval(timerIntervalRef.current);
+    clearInterval(timerRef.current);
     setIsSearching(false);
   };
 
   const handleReset = () => {
     abortRef.current = true;
-    clearInterval(timerIntervalRef.current);
+    clearInterval(timerRef.current);
     setQuery("");
     setResults([]);
     setSearchPerformed(false);
@@ -109,18 +126,32 @@ export default function App() {
 
   const Spinner = () => (
     <div className="flex flex-col items-center my-6">
-      <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <svg
+        className="animate-spin h-8 w-8 text-indigo-600"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+        ></path>
       </svg>
       <p className="mt-2 text-sm">الوقت المستغرق: {formatTime(elapsedTime)}</p>
     </div>
   );
 
   return (
-    <div className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
+    <div
+      className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}
+    >
       <div className="max-w-4xl mx-auto relative">
-        <button onClick={toggleDarkMode} className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition">
+        <button
+          onClick={toggleDarkMode}
+          className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition"
+        >
           {darkMode ? "☀️ وضع النهار" : "🌙 الوضع الليلي"}
         </button>
 
@@ -131,24 +162,41 @@ export default function App() {
             type="text"
             placeholder="اكتب جزء من الاسم أو رقم الجلوس..."
             value={query}
-            onChange={(e) => { setQuery(e.target.value); if (error) setError(""); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (error) setError("");
+            }}
             className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
           {!isSearching && !isPending && (
-            <button onClick={handleSearch} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
+            <button
+              onClick={handleSearch}
+              className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition"
+            >
+              بحث
+            </button>
           )}
           {(isSearching || isPending) && (
-            <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">إيقاف البحث</button>
+            <button
+              onClick={handleStop}
+              className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition"
+            >
+              إيقاف البحث
+            </button>
           )}
-          <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">إعادة ضبط</button>
+          <button
+            onClick={handleReset}
+            className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition"
+          >
+            إعادة ضبط
+          </button>
         </div>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
-        {isLoading && <Spinner />}
-        {!isLoading && (isSearching || isPending) && <Spinner />}
+        {(isLoading || isSearching || isPending) && <Spinner />}
 
-        { !isLoading && searchPerformed && !isSearching && !isPending && (
-          <>
+        {!isLoading && searchPerformed && !(isSearching || isPending) && (
+          <> 
             <p className="text-center mb-4">
               {results.length > 0
                 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}`
