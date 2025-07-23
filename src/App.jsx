@@ -82,10 +82,10 @@ export default function App() {
       });
   }, []);
 
-  // Setup worker for search
+  // Setup Web Worker for resilient word matching
   useEffect(() => {
     if (!students.length) return;
-    const code = `self.onmessage=e=>{const{students,trimmed,raw}=e.data;const m=students.filter(s=>s.normalizedName.includes(trimmed)||s.idString.includes(raw));postMessage(m);}`;
+    const code = `self.onmessage=e=>{const{students,terms,raw}=e.data;const m=students.filter(s=>terms.every(t=>s.normalizedName.includes(t))||s.idString.includes(raw));postMessage(m);}`;
     const blob = new Blob([code], { type: 'application/javascript' });
     workerRef.current = new Worker(URL.createObjectURL(blob));
     workerRef.current.onmessage = e => {
@@ -114,12 +114,13 @@ export default function App() {
     setResults([]);
     setElapsedTime(0);
 
-    const trimmed = normalizeArabic(raw);
+    const normalized = normalizeArabic(raw);
+    const terms = normalized.split(/\s+/).filter(t => t);
     const start = Date.now();
     startTimeRef.current = start;
     timerRef.current = setInterval(() => setElapsedTime(Date.now() - start), 100);
 
-    workerRef.current.postMessage({ students, trimmed, raw });
+    workerRef.current.postMessage({ students, terms, raw });
   };
 
   const handleStop = () => {
@@ -163,10 +164,12 @@ export default function App() {
         onClick={toggleDarkMode}
         className="absolute top-4 right-4 px-3 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition"
       >{darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}</button>
-      {/* Title */}
+
+      {/* Page Title */}
       <h1 className="text-3xl font-bold text-center mb-8">نتيجة الثانوية العامة - 2025</h1>
+
       <div className="max-w-4xl mx-auto flex-grow">
-        {/* Search */}
+        {/* Search Controls */}
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center mb-2">
           <input
             type="text"
@@ -175,7 +178,7 @@ export default function App() {
             disabled={isLoading || isSearching}
             onChange={e => { setQuery(e.target.value); if (error) setError(""); }}
             onKeyDown={e => e.key === 'Enter' && !isSearching && handleSearch()}
-            className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
+            className="w-full sm:w-2/3 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
           {!isSearching ? (
             <button onClick={handleSearch} disabled={isLoading} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
@@ -184,26 +187,51 @@ export default function App() {
           )}
           <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">إعادة ضبط</button>
         </div>
-        {/* Tooltip & Error */}
+
+        {/* Tooltip & Error Messages */}
         {tooltip && <div className="mb-4 text-center text-indigo-500 italic">{tooltip}</div>}
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        {/* Loading */}
-        {Spinner()}
-        {/* Results */}
+
+        {/* Loading Spinner */}
+        {Spinner()} 
+
+        {/* Search Results */}
         {!isLoading && searchPerformed && !isSearching && (
-          <>
-            <p className="text-center mb-4">{results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}</p>
+          <>  
+            <p className="text-center mb-4">
+              {results.length > 0 
+                ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` 
+                : 'لا يوجد نتائج مطابقة'}
+            </p>
+
             {results.length > 0 && (
-              <>
+              <>              
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {paginated.map(s => (
                     <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${
-                      s.rank <= 10 ? (darkMode ? 'border-yellow-400 bg-yellow-900' : 'border-yellow-400 bg-yellow-50') : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')
+                      s.rank <= 10 
+                        ? (darkMode
+                            ? 'border-yellow-400 bg-yellow-900'
+                            : 'border-yellow-400 bg-yellow-50')
+                        : (darkMode
+                            ? 'border-gray-700 bg-gray-800'
+                            : 'bg-white border-indigo-100')
                     }`}>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
-                      <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
-                      <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)</p>
-                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong> (<strong>{((s.rank/students.length)*100).toFixed(1)}%</strong>)</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        رقم الجلوس: <strong>{s.seating_no}</strong>
+                      </p>
+                      <p className="text-lg font-medium">
+                        {s.arabic_name}
+                        {s.rank <= 10 && (
+                          <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>
+                        )}
+                      </p>
+                      <p className="text-sm">
+                        المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree / 320) * 100).toFixed(1)}%</strong>)
+                      </p>
+                      <p className="text-sm">
+                        الترتيب على الجمهورية: <strong>{s.rank}</strong> (<strong>{((s.rank / students.length) * 100).toFixed(1)}%</strong>)
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -217,8 +245,11 @@ export default function App() {
           </>
         )}
       </div>
-      {/* Footer */}
-      <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-auto pt-4">هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.</footer>
+
+      {/* Footer always visible */}
+      <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-auto pt-4">
+        هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
+      </footer>
     </div>
   );
 }
