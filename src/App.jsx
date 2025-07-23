@@ -15,11 +15,7 @@ function formatTime(ms) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   const milliseconds = ms % 1000;
-  return (
-    `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}.${Math.floor(milliseconds / 100)}`
-  );
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${Math.floor(milliseconds / 100)}`;
 }
 
 export default function App() {
@@ -68,7 +64,6 @@ export default function App() {
   const handleSearch = () => {
     const trimmed = query.trim();
     if (!trimmed || !fuse) return;
-    // Validate name length if searching by name
     const hasLetter = /\D/.test(trimmed);
     if (hasLetter && trimmed.length < 5) {
       setError("يرجى إدخال اسم لا يقل عن 5 أحرف");
@@ -80,13 +75,11 @@ export default function App() {
     setIsSearching(true);
     setResults([]);
     setElapsedTime(0);
-    // start timer
     startTimeRef.current = Date.now();
     timerIntervalRef.current = setInterval(() => {
       setElapsedTime(Date.now() - startTimeRef.current);
     }, 100);
 
-    // Perform search asynchronously to allow abort
     setTimeout(() => {
       if (abortRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -97,10 +90,9 @@ export default function App() {
       const norm = normalizeArabic(trimmed);
       const fuseResults = fuse.search(norm);
       const matched = fuseResults.map(({ item }) => item);
-      setResults(matched);
-      // stop timer
       clearInterval(timerIntervalRef.current);
       setElapsedTime(Date.now() - startTimeRef.current);
+      setResults(matched);
       setIsSearching(false);
     }, 0);
   };
@@ -196,7 +188,15 @@ export default function App() {
                 {results.map((student) => (
                   <div
                     key={student.seating_no}
-                    className={`p-4 rounded-xl shadow border transition ${student.rank <= 10 ? (darkMode ? "border-yellow-400 bg-yellow-900" : "border-yellow-400 bg-yellow-50") : (darkMode ? "border-gray-700 bg-gray-800" : "bg-white border-indigo-100")}`
+                    className={`p-4 rounded-xl shadow border transition ${
+                      student.rank <= 10
+                        ? (darkMode
+                          ? "border-yellow-400 bg-yellow-900"
+                          : "border-yellow-400 bg-yellow-50")
+                        : (darkMode
+                          ? "border-gray-700 bg-gray-800"
+                          : "bg-white border-indigo-100")
+                    }`}
                   >
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       رقم الجلوس: <strong>{student.seating_no}</strong>
