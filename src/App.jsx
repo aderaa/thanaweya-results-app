@@ -169,7 +169,7 @@ export default function App() {
       <h1 className="text-3xl font-bold text-center mb-8">نتيجة الثانوية العامة - 2025</h1>
 
       {/* Search Input */}
-      <div className="max-w-4xl mx-auto mb-4">
+      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-3 items-center justify-center mb-4">
         <input
           type="text"
           placeholder="اكتب جزء من الاسم أو رقم الجلوس..."
@@ -177,28 +177,25 @@ export default function App() {
           disabled={isLoading || isSearching}
           onChange={e => { setQuery(e.target.value); if (error) setError(""); }}
           onKeyDown={e => e.key === 'Enter' && !isSearching && handleSearch()}
-          className="w-full px-4 py-2 mb-3 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
+          className="w-full sm:w-4/5 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
         />
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-          {!isSearching ? (
-            <button
-              onClick={handleSearch}
-              disabled={isLoading}
-              className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition whitespace-nowrap"
-            >بحث</button>
-          ) : (
-            <button
-              onClick={handleStop}
-              className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition whitespace-nowrap"
-            >إيقاف البحث</button>
-          )}
+        {!isSearching ? (
           <button
-            onClick={handleReset}
-            className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition whitespace-nowrap"
-          >إعادة ضبط</button>
-        </div>
+            onClick={handleSearch}
+            disabled={isLoading}
+            className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition whitespace-nowrap"
+          >بحث</button>
+        ) : (
+          <button
+            onClick={handleStop}
+            className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition whitespace-nowrap"
+          >إيقاف البحث</button>
+        )}
+        <button
+          onClick={handleReset}
+          className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition whitespace-nowrap"
+        >إعادة ضبط</button>
       </div>
-
       {/* Tooltip & Error */}
       {tooltip && <div className="mb-4 text-center text-indigo-500 italic">{tooltip}</div>}
       {error && <p className="text-red-500 text-center mb-4">{error}</p>}
