@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 function normalizeArabic(text) {
   return text
@@ -78,14 +78,8 @@ export default function App() {
       .finally(() => {
         clearInterval(timerRef.current);
         setElapsedTime(Date.now() - start);
-        setIsLoading(false);        {/* Footer Disclaimer */}
-        <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-8">
-          هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
-        </footer>
-      </div>
-    </div>
-  );
-}
+        setIsLoading(false);
+      });
   }, []);
 
   // Setup Web Worker for background search
@@ -158,11 +152,7 @@ export default function App() {
           viewBox="0 0 24 24"
         >
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-          />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
         </svg>
         <p className="mt-2 text-sm">الوقت المستغرق: {formatTime(elapsedTime)}</p>
       </div>
@@ -196,23 +186,17 @@ export default function App() {
               onClick={handleSearch}
               disabled={isLoading}
               className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition"
-            >
-              بحث
-            </button>
+            >بحث</button>
           ) : (
             <button
               onClick={handleStop}
               className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition"
-            >
-              إيقاف البحث
-            </button>
+            >إيقاف البحث</button>
           )}
           <button
             onClick={handleReset}
             className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition"
-          >
-            إعادة ضبط
-          </button>
+          >إعادة ضبط</button>
         </div>
         {tooltip && <div className="mb-4 text-center text-indigo-500 italic">{tooltip}</div>}
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
@@ -240,23 +224,10 @@ export default function App() {
                               : 'bg-white border-indigo-100')
                       }`}
                     >
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        رقم الجلوس: <strong>{s.seating_no}</strong>
-                      </p>
-                      <p className="text-lg font-medium">
-                        {s.arabic_name}
-                        {s.rank <= 10 && (
-                          <span className="ml-2 text-yellow-400 text-sm font-bold">
-                            🎖️ من الأوائل
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-sm">
-                        المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)
-                      </p>
-                      <p className="text-sm">
-                        الترتيب على الجمهورية: <strong>{s.rank}</strong>
-                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
+                      <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
+                      <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)</p>
+                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong></p>
                     </div>
                   ))}
                 </div>
@@ -265,22 +236,20 @@ export default function App() {
                     onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
                     className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50"
-                  >
-                    السابق
-                  </button>
-                  <span>
-                    صفحة {currentPage} من {totalPages}
-                  </span>
+                  >السابق</button>
+                  <span>صفحة {currentPage} من {totalPages}</span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}
                     className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50"
-                  >
-                    التالي
-                  </button>
+                  >التالي</button>
                 </div>
               </>
             )}
+            {/* Footer Disclaimer */}
+            <footer className="text-center text-xs text-gray-500 dark:text-gray-400">
+              هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
+            </footer>
           </>
         )}
       </div>
