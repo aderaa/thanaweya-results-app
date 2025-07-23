@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useTransition } from "react";
-import Fuse from "fuse.js";
+import React, { useState, useEffect, useRef } from "react";
 
 function normalizeArabic(text) {
   return text
@@ -31,7 +30,6 @@ export default function App() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const abortRef = useRef(false);
   const timerRef = useRef(null);
-  const [isPending, startTransition] = useTransition();
 
   // Initial data load with timer
   useEffect(() => {
@@ -46,16 +44,15 @@ export default function App() {
     fetch("/data/students.json")
       .then((res) => res.json())
       .then((data) => {
-        const valid = data.filter((s) => s.total_degree <= 320);
-        const ranked = valid
-          .sort((a, b) => b.total_degree - a.total_degree)
+        const valid = data.filter((s) => s.total_degree <= 320).
+          sort((a, b) => b.total_degree - a.total_degree)
           .map((student, idx) => ({
             ...student,
             rank: idx + 1,
             normalizedName: normalizeArabic(student.arabic_name),
             idString: student.seating_no.toString(),
           }));
-        setStudents(ranked);
+        setStudents(valid);
       })
       .finally(() => {
         clearInterval(timerRef.current);
@@ -64,19 +61,11 @@ export default function App() {
       });
   }, []);
 
-  // Fuse index
-  const fuse = useMemo(() => {
-    if (!students.length) return null;
-    return new Fuse(students, {
-      keys: ["normalizedName", "idString"],
-      threshold: 0.2,
-      ignoreLocation: true,
-    });
-  }, [students]);
+  const CHUNK_SIZE = 500;
 
   const handleSearch = () => {
     const trimmed = query.trim();
-    if (!trimmed || !fuse) return;
+    if (!trimmed || !students.length) return;
     if (/\D/.test(trimmed) && trimmed.length < 5) {
       setError("يرجى إدخال اسم لا يقل عن 5 أحرف");
       return;
@@ -93,16 +82,33 @@ export default function App() {
       setElapsedTime(Date.now() - start);
     }, 100);
 
-    startTransition(() => {
-      const norm = normalizeArabic(trimmed);
-      const fuseResults = fuse.search(norm);
-      if (!abortRef.current) {
+    const norm = normalizeArabic(trimmed);
+    const matched = [];
+
+    function processChunk(startIndex) {
+      if (abortRef.current) {
+        clearInterval(timerRef.current);
+        setIsSearching(false);
+        return;
+      }
+      const endIndex = Math.min(startIndex + CHUNK_SIZE, students.length);
+      for (let i = startIndex; i < endIndex; i++) {
+        const s = students[i];
+        if (s.normalizedName.includes(norm) || s.idString.includes(trimmed)) {
+          matched.push(s);
+        }
+      }
+      if (endIndex < students.length) {
+        setTimeout(() => processChunk(endIndex), 0);
+      } else {
         clearInterval(timerRef.current);
         setElapsedTime(Date.now() - start);
-        setResults(fuseResults.map(({ item }) => item));
+        setResults(matched);
+        setIsSearching(false);
       }
-      setIsSearching(false);
-    });
+    }
+
+    processChunk(0);
   };
 
   const handleStop = () => {
@@ -144,9 +150,7 @@ export default function App() {
   );
 
   return (
-    <div
-      className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}
-    >
+    <div className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
       <div className="max-w-4xl mx-auto relative">
         <button
           onClick={toggleDarkMode}
@@ -168,15 +172,14 @@ export default function App() {
             }}
             className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
-          {!isSearching && !isPending && (
+          {!isSearching ? (
             <button
               onClick={handleSearch}
               className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition"
             >
               بحث
             </button>
-          )}
-          {(isSearching || isPending) && (
+          ) : (
             <button
               onClick={handleStop}
               className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition"
@@ -193,10 +196,10 @@ export default function App() {
         </div>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
-        {(isLoading || isSearching || isPending) && <Spinner />}
+        {(isLoading || isSearching) && <Spinner />}
 
-        {!isLoading && searchPerformed && !(isSearching || isPending) && (
-          <> 
+        {!isLoading && searchPerformed && !isSearching && (
+          <>
             <p className="text-center mb-4">
               {results.length > 0
                 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}`
@@ -217,21 +220,13 @@ export default function App() {
                           : "bg-white border-indigo-100")
                     }`}
                   >
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      رقم الجلوس: <strong>{student.seating_no}</strong>
-                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{student.seating_no}</strong></p>
                     <p className="text-lg font-medium">
                       {student.arabic_name}
-                      {student.rank <= 10 && (
-                        <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>
-                      )}
+                      {student.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}
                     </p>
-                    <p className="text-sm">
-                      المجموع: <strong>{student.total_degree}</strong>
-                    </p>
-                    <p className="text-sm">
-                      الترتيب على الجمهورية: <strong>{student.rank}</strong>
-                    </p>
+                    <p className="text-sm">المجموع: <strong>{student.total_degree}</strong></p>
+                    <p className="text-sm">الترتيب على الجمهورية: <strong>{student.rank}</strong></p>
                   </div>
                 ))}
               </div>
