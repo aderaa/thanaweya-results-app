@@ -29,12 +29,18 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [error, setError] = useState("");
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
   const startTimeRef = useRef(0);
   const timerRef = useRef(null);
   const abortRef = useRef(false);
   const workerRef = useRef(null);
 
   const PAGE_SIZE = 24;
+
+  // Show popup on initial load
+  useEffect(() => {
+    setShowPopup(true);
+  }, []);
 
   // Initial data load with timer
   useEffect(() => {
@@ -69,11 +75,7 @@ export default function App() {
   // Setup Web Worker for background search
   useEffect(() => {
     if (!students.length) return;
-    const workerCode = `self.onmessage = e => {
-      const { students, trimmed, raw } = e.data;
-      const matched = students.filter(s => s.normalizedName.includes(trimmed) || s.idString.includes(raw));
-      postMessage(matched);
-    }`;
+    const workerCode = `self.onmessage = e => { const { students, trimmed, raw } = e.data; const matched = students.filter(s => s.normalizedName.includes(trimmed) || s.idString.includes(raw)); postMessage(matched); }`;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     workerRef.current = new Worker(URL.createObjectURL(blob));
     workerRef.current.onmessage = e => {
@@ -140,6 +142,20 @@ export default function App() {
 
   return (
     <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
+
+      {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md text-center">
+            <h2 className="text-2xl font-bold mb-4 dark:text-white">مبروك يا بطل!</h2>
+            <p className="mb-6 dark:text-gray-200">المستقبل أمامك مشرق مثل شمس مصر! ثابر واصبر، النجاحات قادمة 🚀</p>
+            <button
+              onClick={() => setShowPopup(false)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+            >حسنًا، لنبدأ!</button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto relative">
         <button onClick={toggleDarkMode} className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition">
           {darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}
@@ -156,10 +172,10 @@ export default function App() {
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         {(isLoading || isSearching) && <Spinner />}
         {!isLoading && searchPerformed && !isSearching && (
-          <>
+          <>  
             <p className="text-center mb-4">{results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}</p>
             {results.length > 0 && (
-              <>
+              <>              
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {paginated.map(s => (
                     <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${s.rank <= 10 ? (darkMode ? 'border-yellow-400 bg-yellow-900' : 'border-yellow-400 bg-yellow-50') : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')}`}
@@ -174,12 +190,12 @@ export default function App() {
                 <div className="flex justify-center items-center space-x-2 mb-8">
                   <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+                    className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50"
                   >السابق</button>
                   <span>صفحة {currentPage} من {totalPages}</span>
                   <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+                    className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50"
                   >التالي</button>
                 </div>
               </>
