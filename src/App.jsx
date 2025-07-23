@@ -178,14 +178,14 @@ export default function App() {
             disabled={isLoading || isSearching}
             onChange={e => { setQuery(e.target.value); if (error) setError(""); }}
             onKeyDown={e => e.key === 'Enter' && !isSearching && handleSearch()}
-            className="w-full sm:w-2/3 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
+            className=\"w-full sm:w-3/4 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
           {!isSearching ? (
-            <button onClick={handleSearch} disabled={isLoading} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
+            <button onClick={handleSearch} disabled={isLoading} className="$1 whitespace-nowrap">بحث</button>
           ) : (
-            <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">إيقاف البحث</button>
+            <button onClick={handleStop} className="$1 whitespace-nowrap">إيقاف البحث</button>
           )}
-          <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">إعادة ضبط</button>
+          <button onClick={handleReset} className="$1 whitespace-nowrap">إعادة ضبط</button>
         </div>
 
         {/* Tooltip & Error Messages */}
