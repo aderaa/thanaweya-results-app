@@ -160,13 +160,34 @@ export default function App() {
             {results.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 {results.map((student) => (
-                  <div key={student.seating_no} className={`p-4 rounded-xl shadow border transition ${student.rank <= 10 ? (darkMode ? "border-yellow-400 bg-yellow-900" : "border-yellow-400 bg-yellow-50") : (darkMode ? "border-gray-700 bg-gray-800" : "bg-white border-indigo-100")}```
+                  <div
+                    key={student.seating_no}
+                    className={`p-4 rounded-xl shadow border transition ${
+                      student.rank <= 10
+                        ? (darkMode
+                          ? "border-yellow-400 bg-yellow-900"
+                          : "border-yellow-400 bg-yellow-50")
+                        : (darkMode
+                          ? "border-gray-700 bg-gray-800"
+                          : "bg-white border-indigo-100")
+                    }`}
+                  >
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      رقم الجلوس: <strong>{student.seating_no}</strong>
+                    </p>
+                    <p className="text-lg font-medium">
+                      {student.arabic_name}
+                      {student.rank <= 10 && (
+                        <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>
+                      )}
+                    </p>
+                    <p className="text-sm">
+                      المجموع: <strong>{student.total_degree}</strong>
+                    </p>
+                    <p className="text-sm">
+                      الترتيب على الجمهورية: <strong>{student.rank}</strong>
+                    </p>
+                  </div>
                 ))}
               </div>
             )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
