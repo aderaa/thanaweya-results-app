@@ -162,14 +162,12 @@ export default function App() {
   const paginated = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
-      <div className="max-w-4xl mx-auto relative">
+    <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} min-h-screen flex flex-col py-10 px-4 font-sans transition-colors duration-300`}>
+      <div className="max-w-4xl mx-auto relative flex-grow">
         <button
           onClick={toggleDarkMode}
           className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition"
-        >
-          {darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}
-        </button>
+        >{darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}</button>
         <h1 className="text-3xl font-bold text-center mb-8">نتيجة الثانوية العامة - 2025</h1>
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center mb-2">
           <input
@@ -203,27 +201,12 @@ export default function App() {
         {Spinner()}
         {!isLoading && searchPerformed && !isSearching && (
           <>
-            <p className="text-center mb-4">
-              {results.length > 0
-                ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}`
-                : 'لا يوجد نتائج مطابقة'}
-            </p>
+            <p className="text-center mb-4">{results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}</p>
             {results.length > 0 && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {paginated.map(s => (
-                    <div
-                      key={s.seating_no}
-                      className={`p-4 rounded-xl shadow border transition ${
-                        s.rank <= 10
-                          ? (darkMode
-                              ? 'border-yellow-400 bg-yellow-900'
-                              : 'border-yellow-400 bg-yellow-50')
-                          : (darkMode
-                              ? 'border-gray-700 bg-gray-800'
-                              : 'bg-white border-indigo-100')
-                      }`}
-                    >
+                    <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${s.rank <= 10 ? (darkMode ? 'border-yellow-400 bg-yellow-900' : 'border-yellow-400 bg-yellow-50') : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')}`>
                       <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
                       <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
                       <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)</p>
@@ -232,27 +215,18 @@ export default function App() {
                   ))}
                 </div>
                 <div className="flex justify-center items-center space-x-2 mb-8">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50"
-                  >السابق</button>
+                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50">السابق</button>
                   <span>صفحة {currentPage} من {totalPages}</span>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50"
-                  >التالي</button>
+                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50">التالي</button>
                 </div>
               </>
             )}
-            {/* Footer Disclaimer */}
-            <footer className="text-center text-xs text-gray-500 dark:text-gray-400">
-              هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
-            </footer>
           </>
         )}
       </div>
+      <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
+        هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
+      </footer>
     </div>
   );
 }
