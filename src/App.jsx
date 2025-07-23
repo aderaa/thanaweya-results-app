@@ -34,7 +34,6 @@ export default function App() {
   const timerIntervalRef = useRef(null);
   const [isPending, startTransition] = useTransition();
 
-  // Load and preprocess students
   useEffect(() => {
     fetch("/data/students.json")
       .then((res) => res.json())
@@ -53,7 +52,6 @@ export default function App() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Fuse index
   const fuse = useMemo(() => {
     if (!students.length) return null;
     return new Fuse(students, { keys: ["normalizedName", "idString"], threshold: 0.2, ignoreLocation: true });
@@ -72,7 +70,6 @@ export default function App() {
     setIsSearching(true);
     setResults([]);
     setElapsedTime(0);
-
     startTimeRef.current = Date.now();
     timerIntervalRef.current = setInterval(() => {
       setElapsedTime(Date.now() - startTimeRef.current);
@@ -150,7 +147,7 @@ export default function App() {
         {isLoading && <Spinner />}
         {!isLoading && (isSearching || isPending) && <Spinner />}
 
-        {!isLoading && searchPerformed && !isSearching && !isPending && (
+        { !isLoading && searchPerformed && !isSearching && !isPending && (
           <>
             <p className="text-center mb-4">
               {results.length > 0
@@ -191,3 +188,9 @@ export default function App() {
                 ))}
               </div>
             )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
