@@ -206,7 +206,15 @@ export default function App() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {paginated.map(s => (
-                    <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${s.rank <= 10 ? (darkMode ? 'border-yellow-400 bg-yellow-900' : 'border-yellow-400 bg-yellow-50') : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')}`>
+                    <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${
+                        s.rank <= 10
+                          ? (darkMode
+                              ? 'border-yellow-400 bg-yellow-900'
+                              : 'border-yellow-400 bg-yellow-50')
+                          : (darkMode
+                              ? 'border-gray-700 bg-gray-800'
+                              : 'bg-white border-indigo-100')
+                      }`}>
                       <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
                       <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
                       <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)</p>
