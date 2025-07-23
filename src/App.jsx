@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useTransition } from "react";
 import Fuse from "fuse.js";
 
 function normalizeArabic(text) {
@@ -11,11 +11,12 @@ function normalizeArabic(text) {
 }
 
 function formatTime(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
+  if (ms < 1000) return `${ms} مللي ثانية`;
+  const totalSeconds = ms / 1000;
+  if (totalSeconds < 60) return `${totalSeconds.toFixed(2)} ثانية`;
   const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const milliseconds = ms % 1000;
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${Math.floor(milliseconds / 100)}`;
+  const seconds = (totalSeconds % 60).toFixed(2);
+  return `${minutes} دقيقة و ${seconds} ثانية`;
 }
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
   const abortRef = useRef(false);
   const startTimeRef = useRef(0);
   const timerIntervalRef = useRef(null);
+  const [isPending, startTransition] = useTransition();
 
   // Load and preprocess students
   useEffect(() => {
@@ -51,21 +53,16 @@ export default function App() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Create Fuse index only once when students change
+  // Fuse index
   const fuse = useMemo(() => {
-    if (students.length === 0) return null;
-    return new Fuse(students, {
-      keys: ["normalizedName", "idString"],
-      threshold: 0.2,
-      ignoreLocation: true,
-    });
+    if (!students.length) return null;
+    return new Fuse(students, { keys: ["normalizedName", "idString"], threshold: 0.2, ignoreLocation: true });
   }, [students]);
 
   const handleSearch = () => {
     const trimmed = query.trim();
     if (!trimmed || !fuse) return;
-    const hasLetter = /\D/.test(trimmed);
-    if (hasLetter && trimmed.length < 5) {
+    if (/\D/.test(trimmed) && trimmed.length < 5) {
       setError("يرجى إدخال اسم لا يقل عن 5 أحرف");
       return;
     }
@@ -75,26 +72,23 @@ export default function App() {
     setIsSearching(true);
     setResults([]);
     setElapsedTime(0);
+
     startTimeRef.current = Date.now();
     timerIntervalRef.current = setInterval(() => {
       setElapsedTime(Date.now() - startTimeRef.current);
     }, 100);
 
-    setTimeout(() => {
-      if (abortRef.current) {
-        clearInterval(timerIntervalRef.current);
-        setIsSearching(false);
-        setResults([]);
-        return;
-      }
+    startTransition(() => {
       const norm = normalizeArabic(trimmed);
       const fuseResults = fuse.search(norm);
-      const matched = fuseResults.map(({ item }) => item);
-      clearInterval(timerIntervalRef.current);
-      setElapsedTime(Date.now() - startTimeRef.current);
-      setResults(matched);
+      if (!abortRef.current) {
+        const matched = fuseResults.map(({ item }) => item);
+        clearInterval(timerIntervalRef.current);
+        setElapsedTime(Date.now() - startTimeRef.current);
+        setResults(matched);
+      }
       setIsSearching(false);
-    }, 0);
+    });
   };
 
   const handleStop = () => {
@@ -118,22 +112,11 @@ export default function App() {
 
   const Spinner = () => (
     <div className="flex flex-col items-center my-6">
-      <svg
-        className="animate-spin h-8 w-8 text-indigo-600"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
+      <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-        ></path>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
       </svg>
-      <p className="mt-2 text-sm">
-        الوقت المستغرق: {formatTime(elapsedTime)}
-      </p>
+      <p className="mt-2 text-sm">الوقت المستغرق: {formatTime(elapsedTime)}</p>
     </div>
   );
 
@@ -151,32 +134,23 @@ export default function App() {
             type="text"
             placeholder="اكتب جزء من الاسم أو رقم الجلوس..."
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              if (error) setError("");
-            }}
+            onChange={(e) => { setQuery(e.target.value); if (error) setError(""); }}
             className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
-          {!isSearching && (
-            <button onClick={handleSearch} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">
-              بحث
-            </button>
+          {!isSearching && !isPending && (
+            <button onClick={handleSearch} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
           )}
-          {isSearching && (
-            <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">
-              إيقاف البحث
-            </button>
+          {(isSearching || isPending) && (
+            <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">إيقاف البحث</button>
           )}
-          <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">
-            إعادة ضبط
-          </button>
+          <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">إعادة ضبط</button>
         </div>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
         {isLoading && <Spinner />}
-        {!isLoading && isSearching && <Spinner />}
+        {!isLoading && (isSearching || isPending) && <Spinner />}
 
-        {!isLoading && searchPerformed && !isSearching && (
+        {!isLoading && searchPerformed && !isSearching && !isPending && (
           <>
             <p className="text-center mb-4">
               {results.length > 0
@@ -186,34 +160,7 @@ export default function App() {
             {results.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 {results.map((student) => (
-                  <div
-                    key={student.seating_no}
-                    className={`p-4 rounded-xl shadow border transition ${
-                      student.rank <= 10
-                        ? (darkMode
-                          ? "border-yellow-400 bg-yellow-900"
-                          : "border-yellow-400 bg-yellow-50")
-                        : (darkMode
-                          ? "border-gray-700 bg-gray-800"
-                          : "bg-white border-indigo-100")
-                    }`}
-                  >
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      رقم الجلوس: <strong>{student.seating_no}</strong>
-                    </p>
-                    <p className="text-lg font-medium">
-                      {student.arabic_name}
-                      {student.rank <= 10 && (
-                        <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>
-                      )}
-                    </p>
-                    <p className="text-sm">
-                      المجموع: <strong>{student.total_degree}</strong>
-                    </p>
-                    <p className="text-sm">
-                      الترتيب على الجمهورية: <strong>{student.rank}</strong>
-                    </p>
-                  </div>
+                  <div key={student.seating_no} className={`p-4 rounded-xl shadow border transition ${student.rank <= 10 ? (darkMode ? "border-yellow-400 bg-yellow-900" : "border-yellow-400 bg-yellow-50") : (darkMode ? "border-gray-700 bg-gray-800" : "bg-white border-indigo-100")}```
                 ))}
               </div>
             )}
