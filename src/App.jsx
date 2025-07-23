@@ -52,7 +52,6 @@ export default function App() {
     "خطوة اليوم تصنع قصة نجاح الغد! 📖"
   ];
 
-  // Initial data load with timer
   useEffect(() => {
     abortRef.current = false;
     setIsLoading(true);
@@ -82,7 +81,6 @@ export default function App() {
       });
   }, []);
 
-  // Setup Web Worker for word-based matching
   useEffect(() => {
     if (!students.length) return;
     const code = `self.onmessage=e=>{const{students,terms,raw}=e.data;const m=students.filter(s=>terms.every(t=>s.normalizedName.includes(t))||s.idString.includes(raw));postMessage(m);}`;
@@ -154,8 +152,9 @@ export default function App() {
       </div>
     );
 
-  const totalPages = Math.ceil(results.length / PAGE_SIZE) || 1;
-  const paginated = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = Math.ceil((searchPerformed ? results : students.slice(0,10)).length / PAGE_SIZE) || 1;
+  const listToShow = searchPerformed ? results : students.slice(0,10);
+  const paginated = listToShow.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} relative min-h-screen flex flex-col py-10 px-4 font-sans transition-colors duration-300`}>
@@ -207,12 +206,19 @@ export default function App() {
       {/* Spinner */}
       {Spinner()}
 
-      {/* Results */}
+      {/* Results or Top 10 */}
       <div className="max-w-4xl mx-auto">
-        {!isLoading && searchPerformed && !isSearching && (
+        {!isLoading && !isSearching && (
           <>
-            <p className="text-center mb-4">{results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}</p>
-            {results.length > 0 && (
+            {!searchPerformed && (
+              <p className="text-center mb-4">أعلى 10 طلاب في الجمهورية</p>
+            )}
+            {searchPerformed && (
+              <p className="text-center mb-4">
+                {results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}
+              </p>
+            )}
+            {paginated.length > 0 && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {paginated.map(s => (
@@ -222,20 +228,19 @@ export default function App() {
                         : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')
                     }`}>
                       <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
-                      <p className="text-lg font-medium">
-                        {s.arabic_name}
-                        {s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}
-                      </p>
-                      <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)</p>
-                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong> (<strong>{((s.rank/students.length)*100).toFixed(1)}%</strong>)</p>
+                      <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
+                      <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree / 320) * 100).toFixed(1)}%</strong>)</p>
+                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong> (<strong>{((s.rank / students.length) * 100).toFixed(1)}%</strong>)</p>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-center items-center space-x-2 mb-8">
-                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50">السابق</button>
-                  <span>صفحة {currentPage} من {totalPages}</span>
-                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50">التالي</button>
-                </div>
+                {searchPerformed && (
+                  <div className="flex justify-center items-center space-x-2 mb-8">
+                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50">السابق</button>
+                    <span>صفحة {currentPage} من {totalPages}</span>
+                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded disabled:opacity-50">التالي</button>
+                  </div>
+                )}
               </>
             )}
           </>
