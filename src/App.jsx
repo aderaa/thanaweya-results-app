@@ -10,6 +10,18 @@ function normalizeArabic(text) {
     .replace(/ؤ/g, "و");
 }
 
+function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const milliseconds = ms % 1000;
+  return (
+    `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}.${Math.floor(milliseconds / 100)}`
+  );
+}
+
 export default function App() {
   const [query, setQuery] = useState("");
   const [students, setStudents] = useState([]);
@@ -19,7 +31,10 @@ export default function App() {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [error, setError] = useState("");
+  const [elapsedTime, setElapsedTime] = useState(0);
   const abortRef = useRef(false);
+  const startTimeRef = useRef(0);
+  const timerIntervalRef = useRef(null);
 
   // Load and preprocess students
   useEffect(() => {
@@ -64,10 +79,17 @@ export default function App() {
     setSearchPerformed(true);
     setIsSearching(true);
     setResults([]);
+    setElapsedTime(0);
+    // start timer
+    startTimeRef.current = Date.now();
+    timerIntervalRef.current = setInterval(() => {
+      setElapsedTime(Date.now() - startTimeRef.current);
+    }, 100);
 
     // Perform search asynchronously to allow abort
     setTimeout(() => {
       if (abortRef.current) {
+        clearInterval(timerIntervalRef.current);
         setIsSearching(false);
         setResults([]);
         return;
@@ -76,28 +98,34 @@ export default function App() {
       const fuseResults = fuse.search(norm);
       const matched = fuseResults.map(({ item }) => item);
       setResults(matched);
+      // stop timer
+      clearInterval(timerIntervalRef.current);
+      setElapsedTime(Date.now() - startTimeRef.current);
       setIsSearching(false);
     }, 0);
   };
 
   const handleStop = () => {
     abortRef.current = true;
+    clearInterval(timerIntervalRef.current);
     setIsSearching(false);
   };
 
   const handleReset = () => {
     abortRef.current = true;
+    clearInterval(timerIntervalRef.current);
     setQuery("");
     setResults([]);
     setSearchPerformed(false);
     setIsSearching(false);
     setError("");
+    setElapsedTime(0);
   };
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
   const Spinner = () => (
-    <div className="flex justify-center my-6">
+    <div className="flex flex-col items-center my-6">
       <svg
         className="animate-spin h-8 w-8 text-indigo-600"
         xmlns="http://www.w3.org/2000/svg"
@@ -111,18 +139,16 @@ export default function App() {
           d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
         ></path>
       </svg>
+      <p className="mt-2 text-sm">
+        الوقت المستغرق: {formatTime(elapsedTime)}
+      </p>
     </div>
   );
 
   return (
-    <div
-      className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}
-    >
+    <div className={`${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"} min-h-screen py-10 px-4 font-sans transition-colors duration-300`}>
       <div className="max-w-4xl mx-auto relative">
-        <button
-          onClick={toggleDarkMode}
-          className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition"
-        >
+        <button onClick={toggleDarkMode} className="absolute top-4 right-4 px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition">
           {darkMode ? "☀️ وضع النهار" : "🌙 الوضع الليلي"}
         </button>
 
@@ -140,25 +166,16 @@ export default function App() {
             className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
           {!isSearching && (
-            <button
-              onClick={handleSearch}
-              className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition"
-            >
+            <button onClick={handleSearch} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">
               بحث
             </button>
           )}
           {isSearching && (
-            <button
-              onClick={handleStop}
-              className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition"
-            >
+            <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">
               إيقاف البحث
             </button>
           )}
-          <button
-            onClick={handleReset}
-            className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition"
-          >
+          <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">
             إعادة ضبط
           </button>
         </div>
@@ -170,22 +187,16 @@ export default function App() {
         {!isLoading && searchPerformed && !isSearching && (
           <>
             <p className="text-center mb-4">
-              {results.length > 0 ? `عدد النتائج: ${results.length}` : "لا يوجد نتائج مطابقة"}
+              {results.length > 0
+                ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}`
+                : "لا يوجد نتائج مطابقة"}
             </p>
             {results.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 {results.map((student) => (
                   <div
                     key={student.seating_no}
-                    className={`p-4 rounded-xl shadow border transition ${
-                      student.rank <= 10
-                        ? darkMode
-                          ? "border-yellow-400 bg-yellow-900"
-                          : "border-yellow-400 bg-yellow-50"
-                        : darkMode
-                        ? "border-gray-700 bg-gray-800"
-                        : "bg-white border-indigo-100"
-                    }`}
+                    className={`p-4 rounded-xl shadow border transition ${student.rank <= 10 ? (darkMode ? "border-yellow-400 bg-yellow-900" : "border-yellow-400 bg-yellow-50") : (darkMode ? "border-gray-700 bg-gray-800" : "bg-white border-indigo-100")}`
                   >
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       رقم الجلوس: <strong>{student.seating_no}</strong>
