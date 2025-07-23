@@ -52,7 +52,7 @@ export default function App() {
     "خطوة اليوم تصنع قصة نجاح الغد! 📖"
   ];
 
-  // Initial data load
+  // Load data with timer
   useEffect(() => {
     abortRef.current = false;
     setIsLoading(true);
@@ -82,7 +82,7 @@ export default function App() {
       });
   }, []);
 
-  // Setup Web Worker for background search
+  // Setup worker for search
   useEffect(() => {
     if (!students.length) return;
     const code = `self.onmessage=e=>{const{students,trimmed,raw}=e.data;const m=students.filter(s=>s.normalizedName.includes(trimmed)||s.idString.includes(raw));postMessage(m);}`;
@@ -145,12 +145,7 @@ export default function App() {
   const Spinner = () =>
     (isLoading || isSearching) && (
       <div className="flex flex-col items-center my-6">
-        <svg
-          className="animate-spin h-8 w-8 text-indigo-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
+        <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
         </svg>
@@ -162,17 +157,16 @@ export default function App() {
   const paginated = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} min-h-screen flex flex-col py-10 px-4 font-sans transition-colors duration-300`}>
-      <div className="max-w-4xl mx-auto flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">نتيجة الثانوية العامة - 2025</h1>
-        <button
-          onClick={toggleDarkMode}
-          className="px-4 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition"
-        >
-          {darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}
-        </button>
-      </div>
-      <div className="max-w-4xl mx-auto relative">
+    <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} relative min-h-screen flex flex-col py-10 px-4 font-sans transition-colors duration-300`}>
+      {/* Dark Mode Toggle */}
+      <button
+        onClick={toggleDarkMode}
+        className="absolute top-4 right-4 px-3 py-1 bg-gray-300 dark:bg-gray-700 dark:text-white text-black rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition"
+      >{darkMode ? '☀️ وضع النهار' : '🌙 الوضع الليلي'}</button>
+      {/* Title */}
+      <h1 className="text-3xl font-bold text-center mb-8">نتيجة الثانوية العامة - 2025</h1>
+      <div className="max-w-4xl mx-auto flex-grow">
+        {/* Search */}
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center mb-2">
           <input
             type="text"
@@ -184,45 +178,32 @@ export default function App() {
             className="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black dark:text-white bg-white dark:bg-gray-800"
           />
           {!isSearching ? (
-            <button
-              onClick={handleSearch}
-              disabled={isLoading}
-              className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition"
-            >بحث</button>
+            <button onClick={handleSearch} disabled={isLoading} className="px-5 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition">بحث</button>
           ) : (
-            <button
-              onClick={handleStop}
-              className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition"
-            >إيقاف البحث</button>
+            <button onClick={handleStop} className="px-5 py-2 bg-red-600 text-white font-semibold rounded shadow hover:bg-red-700 transition">إيقاف البحث</button>
           )}
-          <button
-            onClick={handleReset}
-            className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition"
-          >إعادة ضبط</button>
+          <button onClick={handleReset} className="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded shadow hover:bg-gray-400 transition">إعادة ضبط</button>
         </div>
+        {/* Tooltip & Error */}
         {tooltip && <div className="mb-4 text-center text-indigo-500 italic">{tooltip}</div>}
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        {/* Loading */}
         {Spinner()}
+        {/* Results */}
         {!isLoading && searchPerformed && !isSearching && (
-          <>  
+          <>
             <p className="text-center mb-4">{results.length > 0 ? `عدد النتائج: ${results.length} | الوقت: ${formatTime(elapsedTime)}` : 'لا يوجد نتائج مطابقة'}</p>
             {results.length > 0 && (
-              <>              
+              <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {paginated.map(s => (
                     <div key={s.seating_no} className={`p-4 rounded-xl shadow border transition ${
-                      s.rank <= 10
-                        ? (darkMode
-                            ? 'border-yellow-400 bg-yellow-900'
-                            : 'border-yellow-400 bg-yellow-50')
-                        : (darkMode
-                            ? 'border-gray-700 bg-gray-800'
-                            : 'bg-white border-indigo-100')
+                      s.rank <= 10 ? (darkMode ? 'border-yellow-400 bg-yellow-900' : 'border-yellow-400 bg-yellow-50') : (darkMode ? 'border-gray-700 bg-gray-800' : 'bg-white border-indigo-100')
                     }`}>
                       <p className="text-sm text-gray-500 dark:text-gray-400">رقم الجلوس: <strong>{s.seating_no}</strong></p>
                       <p className="text-lg font-medium">{s.arabic_name}{s.rank <= 10 && <span className="ml-2 text-yellow-400 text-sm font-bold">🎖️ من الأوائل</span>}</p>
                       <p className="text-sm">المجموع: <strong>{s.total_degree}</strong> (<strong>{((s.total_degree/320)*100).toFixed(1)}%</strong>)</p>
-                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong></p>
+                      <p className="text-sm">الترتيب على الجمهورية: <strong>{s.rank}</strong> (<strong>{((s.rank/students.length)*100).toFixed(1)}%</strong>)</p>
                     </div>
                   ))}
                 </div>
@@ -236,9 +217,8 @@ export default function App() {
           </>
         )}
       </div>
-      <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
-        هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
-      </footer>
+      {/* Footer */}
+      <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-auto pt-4">هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.</footer>
     </div>
   );
 }
