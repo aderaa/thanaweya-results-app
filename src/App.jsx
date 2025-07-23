@@ -78,8 +78,14 @@ export default function App() {
       .finally(() => {
         clearInterval(timerRef.current);
         setElapsedTime(Date.now() - start);
-        setIsLoading(false);
-      });
+        setIsLoading(false);        {/* Footer Disclaimer */}
+        <footer className="text-center text-xs text-gray-500 dark:text-gray-400 mt-8">
+          هذا الموقع غير رسمي وغير تابع لوزارة التربية والتعليم، واستخدام البيانات على مسؤولية المستخدم.
+        </footer>
+      </div>
+    </div>
+  );
+}
   }, []);
 
   // Setup Web Worker for background search
