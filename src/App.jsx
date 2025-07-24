@@ -9,6 +9,7 @@ function normalizeArabic(text) {
     .replace(/ؤ/g, "و");
 }
 
+
 function formatTime(ms) {
   if (ms < 1000) return `${ms} مللي ثانية`;
   const totalSec = ms / 1000;
